@@ -1,0 +1,57 @@
+<mujoco model="box_on_plane">
+  <compiler meshdir="meshes" />
+  <statistic extent="1.5" meansize=".05" />
+  <option integrator="Euler" timestep="0.001" jacobian="sparse" gravity="0 0 -9.81" />
+  <size nconmax="3000" njmax="4000" />
+  <visual>
+    <rgba haze="0.15 0.25 0.35 1" />
+    <quality shadowsize="4096" />
+    <map stiffness="700" shadowscale="0.5" fogstart="10" fogend="15" zfar="40" haze="0.3" />
+    <scale forcewidth="0.001" />
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512" />
+    <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512" mark="cross" markrgb=".8 .8 .8" />
+    <material name="matplane" reflectance="0.0" texture="texplane" texrepeat="1 1" texuniform="true" />
+    <mesh file="plate_8in_col.stl" scale="1 1 1" />
+  </asset>
+
+  <custom>
+    <!-- All custom parameters related to contact surfaces have the prefix cs:: -->
+    <text name="cs::HydroelasticContactRepresentation" data="kTriangle" />
+    <numeric name="cs::VisualizeSurfaces" data="1" />
+    <!-- Contact properties for each geom: hydroelasticModulus, dissipation, resolutionHint, staticFriction, dynamicFriction.
+    A rigid object has hydroelasticModulus of 0 and dissipation of 1. 
+    For meshes the resolutionHint will be ignored. -->
+    <numeric name="cs::ground" data="0 1.0 0.1 0.3 0.3" />
+    <numeric name="cs::plate" data="0 1.0 0 0.3 0.3" />
+    <numeric name="cs::ball" data="3e4 3.0 0.015 0.00 0.00" />
+    <numeric name="cs::floor" data="3e4 3.0 0 0.3 0.3"/>
+  </custom>
+
+  <worldbody>
+    <light directional="true" diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 5.0" dir="0 0 -1" castshadow="false" />
+    <light directional="true" diffuse=".6 .6 .6" specular="0.2 0.2 0.2" pos="0 0 4" dir="0 0 -1" castshadow="false" />
+    <geom name="ground" type="plane" size="0 0 1" pos="0 0 -0.05" quat="1 0 0 0" material="matplane" />
+    <body name="body_floor" pos="0 0 -0.025">
+      <inertial pos="0 0 0.0" mass="0.1" diaginertia="0.000770833 0.000770833 0.0015" />
+      <geom name="floor" type="box" size="0.15 0.15 0.025" rgba="0.7 0.7 0.7 0.5"/>
+    </body>
+    <body name="body_plate" pos="0 0.0 0.0">
+      <inertial pos="0 0 0.00915" mass="0.375" diaginertia="0.000860 0.000860 0.00171" />
+      <freejoint name="plate_joint" />
+      <geom name="plate" type="mesh" mesh="plate_8in_col" rgba="0.9 0.9 0.9 0.5"/>
+    </body>
+    <body name="body_ball" pos="0.1 0 0.15">
+      <freejoint name="ball_joint" />
+      <geom name="ball" type="sphere" size="0.05" rgba="1.0 0.55 0.0 0.2" mass="0.1" />
+      <site type="cylinder" size="0.0025" fromto="0.0525 0 0 0.0475 0 0" rgba="1 0 0 1" />
+      <site type="cylinder" size="0.0025" fromto="-0.0525 0 0 -0.0475 0 0" rgba="1 0 0 1" />
+      <site type="cylinder" size="0.0025" fromto="0 0.0525 0 0 0.0475 0" rgba="0 1 0 1" />
+      <site type="cylinder" size="0.0025" fromto="0 -0.0525 0 0 -0.0475 0" rgba="0 1 0 1" />
+      <site type="cylinder" size="0.0025" fromto="0 0 0.0525 0 0 0.0475" rgba="0 0 1 1" />
+      <site type="cylinder" size="0.0025" fromto="0 0 -0.0525 0 0 -0.0475" rgba="0 0 1 1" />
+    </body>
+  </worldbody>
+</mujoco>

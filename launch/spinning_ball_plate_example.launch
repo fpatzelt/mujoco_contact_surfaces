@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="verbose"      default="true"  doc="Should more debug output be printed?" />
+  <arg name="unpause"     default="false"  doc="Should the simulation be unpaused on start?" />
+  <arg name="headless"   default="false" doc="Should the simulation be rendered." />
+  <arg name="num_sim_steps"   default="-1" doc="Number of simulation steps to run. Set to '-1' to run indefinitely." />
+  <arg name="modelfile"   default="$(find mujoco_contact_surfaces)/assets/spinning_ball_plate_world.xml"  />
+  <param name="/use_sim_time" value="true"/>
+
+  <rosparam file="$(find mujoco_contact_surfaces)/config/mujoco_contact_surfaces.yaml" subst_value="true" />
+  
+
+  <node pkg="mujoco_ros" type="mujoco_server" name="mujoco_server" output="screen" >
+    <param name="modelfile" type="str"  value="$(arg modelfile)" />
+    <rosparam file="$(find mujoco_contact_surfaces)/config/spinning_ball_plate_example_initial_joint_velocities.yaml" subst_value="true" />
+  </node>
+</launch>
