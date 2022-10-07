@@ -102,5 +102,5 @@
 
   <contact>
     <exclude body1="body_plate" body2="body_myrmex"/>
-  <contact/>
+  </contact>
 </mujoco>

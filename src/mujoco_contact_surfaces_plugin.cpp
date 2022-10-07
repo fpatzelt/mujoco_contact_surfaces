@@ -266,8 +266,8 @@ void MujocoContactSurfacesPlugin::parseROSParam()
 					ts->lastUpdate    = 0;
 					double xs         = m_->geom_size[3 * id];
 					double ys         = m_->geom_size[3 * id + 1];
-					ts->cx            = (int)(2 * xs / resolution) ;
-					ts->cy            = (int)(2 * ys / resolution) ;
+					ts->cx            = (int)(2 * xs / resolution);
+					ts->cy            = (int)(2 * ys / resolution);
 					ts->vGeoms        = new mjvGeom[ts->cx * ts->cy];
 					ROS_INFO_STREAM_NAMED("mujoco_contact_surfaces",
 					                      "Found tactile sensor: " << sensorName << " " << ts->cx << "x" << ts->cy);
@@ -341,6 +341,67 @@ int MujocoContactSurfacesPlugin::collision_cb(const mjModel *m, const mjData *d,
 		GeomCollision *gc = new GeomCollision(g1, g2, *s.get());
 		evaluateContactSurface(m, d, gc);
 		geomCollisions.push_back(gc);
+
+		int n = gc->pointCollisions.size();
+		for (int i = 0; i < n; ++i) {
+			mjContact *con0   = new mjContact();
+			PointCollision pc = gc->pointCollisions[i];
+			if (pc.fn0 < 0.001) {
+				continue;
+			}
+			for (int j = 0; j < 3; ++j) {
+				con0->pos[j]   = pc.p[j];
+				con0->frame[j] = pc.n[j];
+			}
+			// define frame
+			mjtNum tmp[3];
+
+			// normalize xaxis
+			mju_normalize3(con0->frame);
+
+			mju_zero3(con0->frame + 3);
+
+			if (con0->frame[1] < 0.5 && con0->frame[1] > -0.5) {
+				con0->frame[4] = 1;
+			} else {
+				con0->frame[5] = 1;
+			}
+			// make yaxis orthogonal to xaxis
+			mju_scl3(tmp, con0->frame, mju_dot3(con0->frame, con0->frame + 3));
+			mju_subFrom3(con0->frame + 3, tmp);
+			mju_normalize3(con0->frame + 3);
+
+			// zaxis = cross(xaxis, yaxis)
+			mju_cross(con0->frame + 6, con0->frame, con0->frame + 3);
+
+			con0->dist          = -pc.fn0;
+			con0->includemargin = 0;
+			con0->friction[0]   = 1;
+			con0->friction[1]   = 1;
+			con0->friction[2]   = 0.005;
+			con0->friction[3]   = 0.0001;
+			con0->friction[4]   = 0.0001;
+
+			con0->solimp[0] = 0.9;
+			con0->solimp[1] = 0.95;
+			con0->solimp[2] = 0.001;
+			con0->solimp[3] = 0.5;
+			con0->solimp[4] = 2;
+
+			con0->solref[0] = -m->opt.timestep * pc.stiffness;
+			con0->solref[1] = -pc.damping * 100;
+
+			con0->exclude = 0;
+			con0->geom1   = gc->g2;
+			con0->geom2   = gc->g1;
+			mju_zero(con0->H, 36);
+			con0->mu  = 0;
+			con0->dim = 1;
+
+			mj_addContact(m, d_.get(), con0);
+		}
+
+		// return n;
 	}
 
 	return 0;
@@ -454,6 +515,9 @@ void MujocoContactSurfacesPlugin::passive_cb(const mjModel *m, mjData *d)
 		    CoulombFriction<double>{ cp2->static_friction, cp2->dynamic_friction };
 		const CoulombFriction<double> combined_friction =
 		    CalcContactFrictionFromSurfaceProperties(geometryM_friction, geometryN_friction);
+
+		mjtNum total_force[3] = { 0, 0, 0 };
+
 		const double mu_coulomb = combined_friction.dynamic_friction();
 		for (PointCollision pc : gc->pointCollisions) {
 			const RigidTransform<double> &X_WA  = getGeomPose(g1, d);
@@ -499,9 +563,46 @@ void MujocoContactSurfacesPlugin::passive_cb(const mjModel *m, mjData *d)
 			const mjtNum point[3]  = { pc.p[0], pc.p[1], pc.p[2] };
 			const mjtNum torque[3] = { 0, 0, 0 };
 			const mjtNum forceA[3] = { f[0], f[1], f[2] };
+
 			const mjtNum forceB[3] = { -f[0], -f[1], -f[2] };
-			mj_applyFT(m, d, forceA, torque, point, m->geom_bodyid[g1], d->qfrc_passive);
-			mj_applyFT(m, d, forceB, torque, point, m->geom_bodyid[g2], d->qfrc_passive);
+
+			// mj_applyFT(m, d, forceA, torque, point, m->geom_bodyid[g1], d->qfrc_passive);
+			// mj_applyFT(m, d, forceB, torque, point, m->geom_bodyid[g2], d->qfrc_passive);
+
+			const Vector3<double> nf = fn * pc.n;
+			for (int i = 0; i < 3; ++i) {
+				total_force[i] += nf[i];
+			}
+
+			// mjContact *con = new mjContact();
+			// con->dist      = pc.fn0;
+			// con->pos con->frame con->
+			//     // contact parameters set by geom-specific collision detector
+			//     mjtNum dist; // distance between nearest points; neg: penetration
+			// mjtNum pos[3]; // position of contact point: midpoint between geoms
+			// mjtNum frame[9]; // normal is in [0-2]
+
+			// // contact parameters set by mj_collideGeoms
+			// mjtNum includemargin; // include if dist<includemargin=margin-gap
+			// mjtNum friction[5]; // tangent1, 2, spin, roll1, 2
+			// mjtNum solref[mjNREF]; // constraint solver reference
+			// mjtNum solimp[mjNIMP]; // constraint solver impedance
+
+			// // internal storage used by solver
+			// mjtNum mu; // friction of regularized cone, set by mj_makeConstraint
+			// mjtNum H[36]; // cone Hessian, set by mj_updateConstraint
+
+			// // contact descriptors set by mj_collideGeoms
+			// int dim; // contact space dimensionality: 1, 3, 4 or 6
+			// int geom1; // id of geom 1
+			// int geom2; // id of geom 2
+
+			// // flag set by mj_fuseContact or mj_instantianteEquality
+			// int exclude; // 0: include, 1: in gap, 2: fused, 3: equality, 4: no dofs
+
+			// // address computed by mj_instantiateContact
+			// int efc_address; // address in efc; -1: not incl
+			// mj_addContact(m, d, con);
 
 			// visualize collision force:
 			// int id = contactProperties[g1]->contact_type == SOFT ? g1 : g2;
@@ -535,6 +636,34 @@ void MujocoContactSurfacesPlugin::passive_cb(const mjModel *m, mjData *d)
 					visualizeMeshElement(pc.face, gc->s.poly_mesh_W(), fn);
 				}
 			}
+		}
+		if (n_vGeom < MAX_VGEOM) {
+			// visualize collision force:
+			mjtNum fl           = mju_normalize(total_force, 3);
+			const float rgba[4] = { 1, 0, 0, 0.8 };
+			mjtNum size[3]      = { 0.001, 0.001, 0.1 * fl };
+			mjtNum pos[3], a[3], b[3];
+			mjtNum rot[9];
+			mjtNum axis[3] = { 1, 0, 0 };
+			if (std::abs(total_force[0]) > 0.99) {
+				axis[0] = 0;
+				axis[1] = 1;
+			}
+			mju_cross(a, total_force, axis);
+			mju_cross(b, total_force, a);
+
+			Vector3<double> centroid = gc->s.centroid();
+
+			for (int i = 0; i < 3; ++i) {
+				pos[i]     = centroid[i];
+				rot[i]     = a[i];
+				rot[i + 3] = b[i];
+				rot[i + 6] = total_force[i];
+			}
+			// ROS_INFO_STREAM_NAMED("mujoco_contact_surfaces",
+			//                       "Total force " << total_force[0] << " " << total_force[1] << " " << total_force[2]);
+			mjvGeom *g = vGeoms + n_vGeom++;
+			mjv_initGeom(g, mjGEOM_ARROW, size, pos, rot, rgba);
 		}
 	}
 	for (TactileSensor *ts : tactileSensors) {
