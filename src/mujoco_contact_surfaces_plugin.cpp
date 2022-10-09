@@ -343,12 +343,13 @@ int MujocoContactSurfacesPlugin::collision_cb(const mjModel *m, const mjData *d,
 		geomCollisions.push_back(gc);
 
 		int n = gc->pointCollisions.size();
+		ROS_INFO_STREAM_NAMED("mujoco_contact_surfaces", "Adding new contacts " << n);
 		for (int i = 0; i < n; ++i) {
 			mjContact *con0   = new mjContact();
 			PointCollision pc = gc->pointCollisions[i];
-			if (pc.fn0 < 0.001) {
-				continue;
-			}
+			// if (pc.fn0 < 0.001) {
+			// 	continue;
+			// }
 			for (int j = 0; j < 3; ++j) {
 				con0->pos[j]   = pc.p[j];
 				con0->frame[j] = pc.n[j];
@@ -382,14 +383,14 @@ int MujocoContactSurfacesPlugin::collision_cb(const mjModel *m, const mjData *d,
 			con0->friction[3]   = 0.0001;
 			con0->friction[4]   = 0.0001;
 
-			con0->solimp[0] = 0.9;
-			con0->solimp[1] = 0.95;
-			con0->solimp[2] = 0.001;
+			con0->solimp[0] = 1;
+			con0->solimp[1] = 1;
+			con0->solimp[2] = 0.5;
 			con0->solimp[3] = 0.5;
-			con0->solimp[4] = 2;
+			con0->solimp[4] = 1;
 
-			con0->solref[0] = -m->opt.timestep * pc.stiffness;
-			con0->solref[1] = -pc.damping * 100;
+			con0->solref[0] = -pc.stiffness * 10 ;
+			con0->solref[1] = -pc.damping / m_->opt.timestep /10;
 
 			con0->exclude = 0;
 			con0->geom1   = gc->g2;
@@ -493,6 +494,7 @@ void MujocoContactSurfacesPlugin::evaluateContactSurface(const mjModel *m, const
 
 void MujocoContactSurfacesPlugin::passive_cb(const mjModel *m, mjData *d)
 {
+	ROS_INFO_STREAM_NAMED("mujoco_contact_surfaces", "Number of contacts " << d->ncon << " / " << m->nconmax);
 	if (visualizeContactSurfaces) {
 		// reset the visualized geoms
 		n_vGeom               = 0;

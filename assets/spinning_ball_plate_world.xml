@@ -19,7 +19,7 @@
 
   <custom>
     <!-- All custom parameters related to contact surfaces have the prefix cs:: -->
-    <text name="cs::HydroelasticContactRepresentation" data="kTriangle" />
+    <text name="cs::HydroelasticContactRepresentation" data="kPolygon" />
     <numeric name="cs::VisualizeSurfaces" data="1" />
     <!-- Contact properties for each geom: hydroelasticModulus, dissipation, resolutionHint, staticFriction, dynamicFriction.
     A rigid object has hydroelasticModulus of 0 and dissipation of 1. 
