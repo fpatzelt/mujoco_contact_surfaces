@@ -344,63 +344,63 @@ int MujocoContactSurfacesPlugin::collision_cb(const mjModel *m, const mjData *d,
 
 		int n = gc->pointCollisions.size();
 		ROS_INFO_STREAM_NAMED("mujoco_contact_surfaces", "Adding new contacts " << n);
-		for (int i = 0; i < n; ++i) {
-			mjContact *con0   = new mjContact();
-			PointCollision pc = gc->pointCollisions[i];
-			// if (pc.fn0 < 0.001) {
-			// 	continue;
-			// }
-			for (int j = 0; j < 3; ++j) {
-				con0->pos[j]   = pc.p[j];
-				con0->frame[j] = pc.n[j];
-			}
-			// define frame
-			mjtNum tmp[3];
+		// for (int i = 0; i < n; ++i) {
+		// 	mjContact *con0   = new mjContact();
+		// 	PointCollision pc = gc->pointCollisions[i];
+		// 	// if (pc.fn0 < 0.001) {
+		// 	// 	continue;
+		// 	// }
+		// 	for (int j = 0; j < 3; ++j) {
+		// 		con0->pos[j]   = pc.p[j];
+		// 		con0->frame[j] = pc.n[j];
+		// 	}
+		// 	// define frame
+		// 	mjtNum tmp[3];
 
-			// normalize xaxis
-			mju_normalize3(con0->frame);
+		// 	// normalize xaxis
+		// 	mju_normalize3(con0->frame);
 
-			mju_zero3(con0->frame + 3);
+		// 	mju_zero3(con0->frame + 3);
 
-			if (con0->frame[1] < 0.5 && con0->frame[1] > -0.5) {
-				con0->frame[4] = 1;
-			} else {
-				con0->frame[5] = 1;
-			}
-			// make yaxis orthogonal to xaxis
-			mju_scl3(tmp, con0->frame, mju_dot3(con0->frame, con0->frame + 3));
-			mju_subFrom3(con0->frame + 3, tmp);
-			mju_normalize3(con0->frame + 3);
+		// 	if (con0->frame[1] < 0.5 && con0->frame[1] > -0.5) {
+		// 		con0->frame[4] = 1;
+		// 	} else {
+		// 		con0->frame[5] = 1;
+		// 	}
+		// 	// make yaxis orthogonal to xaxis
+		// 	mju_scl3(tmp, con0->frame, mju_dot3(con0->frame, con0->frame + 3));
+		// 	mju_subFrom3(con0->frame + 3, tmp);
+		// 	mju_normalize3(con0->frame + 3);
 
-			// zaxis = cross(xaxis, yaxis)
-			mju_cross(con0->frame + 6, con0->frame, con0->frame + 3);
+		// 	// zaxis = cross(xaxis, yaxis)
+		// 	mju_cross(con0->frame + 6, con0->frame, con0->frame + 3);
 
-			con0->dist          = -pc.fn0;
-			con0->includemargin = 0;
-			con0->friction[0]   = 1;
-			con0->friction[1]   = 1;
-			con0->friction[2]   = 0.005;
-			con0->friction[3]   = 0.0001;
-			con0->friction[4]   = 0.0001;
+		// 	con0->dist          = -pc.fn0;
+		// 	con0->includemargin = 0;
+		// 	con0->friction[0]   = 1;
+		// 	con0->friction[1]   = 1;
+		// 	con0->friction[2]   = 0.005;
+		// 	con0->friction[3]   = 0.0001;
+		// 	con0->friction[4]   = 0.0001;
 
-			con0->solimp[0] = 1;
-			con0->solimp[1] = 1;
-			con0->solimp[2] = 0.5;
-			con0->solimp[3] = 0.5;
-			con0->solimp[4] = 1;
+		// 	con0->solimp[0] = 1;
+		// 	con0->solimp[1] = 1;
+		// 	con0->solimp[2] = 0.5;
+		// 	con0->solimp[3] = 0.5;
+		// 	con0->solimp[4] = 1;
 
-			con0->solref[0] = -pc.stiffness * 10 ;
-			con0->solref[1] = -pc.damping / m_->opt.timestep /10;
+		// 	con0->solref[0] = -pc.stiffness * 10 ;
+		// 	con0->solref[1] = -pc.damping / m_->opt.timestep /10;
 
-			con0->exclude = 0;
-			con0->geom1   = gc->g2;
-			con0->geom2   = gc->g1;
-			mju_zero(con0->H, 36);
-			con0->mu  = 0;
-			con0->dim = 1;
+		// 	con0->exclude = 0;
+		// 	con0->geom1   = gc->g2;
+		// 	con0->geom2   = gc->g1;
+		// 	mju_zero(con0->H, 36);
+		// 	con0->mu  = 0;
+		// 	con0->dim = 1;
 
-			mj_addContact(m, d_.get(), con0);
-		}
+		// 	mj_addContact(m, d_.get(), con0);
+		// }
 
 		// return n;
 	}
@@ -568,8 +568,8 @@ void MujocoContactSurfacesPlugin::passive_cb(const mjModel *m, mjData *d)
 
 			const mjtNum forceB[3] = { -f[0], -f[1], -f[2] };
 
-			// mj_applyFT(m, d, forceA, torque, point, m->geom_bodyid[g1], d->qfrc_passive);
-			// mj_applyFT(m, d, forceB, torque, point, m->geom_bodyid[g2], d->qfrc_passive);
+			mj_applyFT(m, d, forceA, torque, point, m->geom_bodyid[g1], d->qfrc_passive);
+			mj_applyFT(m, d, forceB, torque, point, m->geom_bodyid[g2], d->qfrc_passive);
 
 			const Vector3<double> nf = fn * pc.n;
 			for (int i = 0; i < 3; ++i) {

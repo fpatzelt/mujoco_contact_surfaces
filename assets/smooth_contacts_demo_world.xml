@@ -1,0 +1,46 @@
+<mujoco model="box_on_box">
+  <compiler meshdir="asset" texturedir="asset" />
+  <statistic extent="1.5" meansize=".05" />
+  <option timestep="0.001" jacobian="sparse" gravity="0 0 0" />
+  <size nconmax="3000" njmax="4000" />
+  <visual>
+    <rgba haze="0.15 0.25 0.35 1" />
+    <quality shadowsize="4096" />
+    <map stiffness="700" shadowscale="0.5" fogstart="10" fogend="15" zfar="40" haze="0.3" />
+    <scale forcewidth="0.001" />
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512" />
+    <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512" mark="cross" markrgb=".8 .8 .8" />
+    <material name="matplane" reflectance="0.3" texture="texplane" texrepeat="1 1" texuniform="true" />
+  </asset>
+
+  <custom>
+    <!-- All custom parameters related to contact surfaces have the prefix cs:: -->
+    <text name="cs::HydroelasticContactRepresentation" data="kPolygon" />
+    <numeric name="cs::VisualizeSurfaces" data="1" />
+    <!-- Contact properties for each geom: hydroelasticModulus, dissipation, resolutionHint, staticFriction, dynamicFriction.
+    A rigid object has hydroelasticModulus of 0 and dissipation of 1. 
+    A soft box with a resolution hint of 0 uses a resolution automatically computed by drake. -->
+    <numeric name="cs::box1" data="5e4 5.0 0.05 0.0 0.0" />
+    <numeric name="cs::box0" data="5e4 5.0 0.05 0.0 0.0" />
+  </custom>
+
+  <worldbody>
+    <light directional="true" diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 5.0" dir="0 0 -1" castshadow="false" />
+    <light directional="true" diffuse=".6 .6 .6" specular="0.2 0.2 0.2" pos="0 0 4" dir="0 0 -1" />
+    <!-- <geom name="ground" type="plane" size="0 0 1" pos="0 0 0" quat="1 0 0 0" material="matplane" condim="1"/> -->
+
+    <body name="body_box0" pos="0 0.0 0.0" euler="0 45 0">
+      <!-- <freejoint /> -->
+      <geom name="box0" type="box" size="0.1 0.4 0.1" rgba="0.7 0.7 0.7 0.5" />
+    </body>
+
+    <body name="body_box1" pos="0.2 0 -0.2">
+      <joint type="slide" axis="0 0 1" limited="true" range="0 0.5" />
+      <geom name="box1" type="box" pos="0 0.15 0" size="0.1 0.1 0.1" rgba="0.7 0.7 0.7 0.5" />
+      <geom name="box2" type="box" pos="0 -0.15 0" size="0.1 0.1 0.1" rgba="0.7 0.7 0.7 0.5" priority="1" solimp="0.5 0.99 0.01 0.5 2" solref="0.2 1" />
+    </body>
+  </worldbody>
+</mujoco>
